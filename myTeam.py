@@ -75,6 +75,88 @@ class ReflexCaptureAgent(CaptureAgent):
 
 class OffensiveAgent(ReflexCaptureAgent):
 
+    def __init__(self, index):
+        CaptureAgent.__init__(self, index)
+        self.numEnemyFood = "+inf"
+        self.inactiveTime = 0
+
+    def registerInitialState(self, gameState):
+        CaptureAgent.registerInitialState(self, gameState)
+        # self.distancer.getMazeDistances()
+
+    def chooseAction(self, gameState):
+        self.updateInactiveTime()
+
+        # If it can only choose action can lead to some where in future 5 stpes
+        actions = gameState.getLegalActions(self.index)
+        actions.remove(Directions.STOP)
+        next = []
+        for action in actions:
+            if not self.toDeadEnd(gameState, action, 5):
+                next.append(action)
+        if len(next) == 0:
+            next = actions
+
+        values = []
+        for action in next:
+            successor = gameState.generateSuccessor(self.index, action)
+            value = 0
+            # randomly pick 30 movie with their value of following 10 steps
+            for i in range(1, 31):
+                value += self.randomValue(successor, 10)
+            values.append(value)
+
+        best = max(values)
+        ties = filter(lambda x: x[0] == best, zip(values, next))
+        return random.choice(ties)[1]
+
+    def updateInactiveTime(self):
+        # Check whether its in active
+        foodCount = len(self.getFood(gameState).asList())
+        if self.numEnemyFood != foodCount:
+            self.numEnemyFood = foodCOunt
+            self.inactiveTime = 0
+        else:
+            self.inactiveTime += 1
+        if gameState.getInitialAgentPosition(self.index) == gameState.getAgentState(self.index).getPosition():
+            self.inactiveTime = 0
+
+    def toDeadEnd(self, gameState, action, depth):
+        if depth == 0:
+            return False;
+
+        old = self.getScore(gameState)
+        successor = gameState.generateSuccessor(self.index, action)
+        score = self.getScore(successor)
+        if old < score:
+            return False;
+
+        actions = self.getForwardActions(gameState)
+        if len(actions) == 0:
+            return True;
+        for action in actions:
+            if not self.toDeadEnd(state, action, depth - 1):
+                return False
+        return True
+
+    def randomValue(self, gameState, depth):
+        state = gameState.deepCopy()
+        while depth > 0:
+            actions = self.getForwardActions(state)
+            action = random.choice(actions)
+            state = state.generateSuccessor(self.index, action)
+            depth -= 1
+        return self.evaluate(state, Directions.STOP)
+
+    def getForwardActions(self, gameState):
+        actions = gameState.getLegalActions(self.index)
+        actions.remove(Directions.STOP)
+        reversed = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        if reversed in actions and len(actions) > 1:
+            actions.remove(reversed)
+
+        return actions
+
     def getFeatures(self, gameState, action):
         ret = util.Counter()
         successor = self.getSuccessor(gameState, action)
@@ -101,7 +183,6 @@ class OffensiveAgent(ReflexCaptureAgent):
 
         return ret
 
-
     def getWeights(self, gameState, action):
         if self.inactiveTime > 80:
             return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman':  1000}
@@ -123,88 +204,6 @@ class OffensiveAgent(ReflexCaptureAgent):
         return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman': 0}
 
 
-    def randomSimulation(self, depth, gameState):
-        state = gameState.deepCopy()
-        while depth > 0:
-            actions = state.getLegalActions(self.index)
-            actions.remove(Directions.STOP)
-            direction = state.getAgentState(self.index).configuration.direction
-            reversed = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
-            if reversed in actions and len(actions) > 1:
-                actions.remove(reversed)
-            action = random.choice(actions)
-            state = state.generateSuccessor(self.index, action)
-            depth -= 1
-        return self.evaluate(state, Directions.STOP)
-
-
-    def toEmpty(self, gameState, action, depth):
-        if depth == 0:
-            return False;
-
-        old = self.getScore(gameState)
-        state = gameState.generateSuccessor(self.index, action)
-        score = self.getScore(state)
-        if old < score:
-            return False;
-
-        actions = state.getLegalActions(self.index)
-        actions.remove(Directions.STOP)
-
-        reversed = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
-        if reversed in actions:
-            actions.remove(reversed)
-        if len(actions) == 0:
-            return True;
-        for action in actions:
-            if not self.toEmpty(state, action, depth - 1):
-                return False
-        return True
-
-    def __init__(self, index):
-        CaptureAgent.__init__(self, index)
-        self.numEnemyFood = "+inf"
-        self.inactiveTime = 0
-
-    def registerInitialState(self, gameState):
-        CaptureAgent.registerInitialState(self, gameState)
-        # self.distancer.getMazeDistances()
-
-    def chooseAction(self, gameState):
-        # Check whether its in active
-        foodCount = len(self.getFood(gameState).asList())
-        if self.numEnemyFood != foodCount:
-            self.numEnemyFood = foodCOunt
-            self.inactiveTime = 0
-        else:
-            self.inactiveTime += 1
-        if gameState.getInitialAgentPosition(self.index) == gameState.getAgentState(self.index).getPosition():
-            self.inactiveTime = 0
-
-        # If it can only choose action can lead to some where in future 5 stpes
-        actions = gameState.getLegalActions(self.index)
-        actions.remove(Directions.STOP)
-        next = []
-        for action in actions:
-            if not self.toEmpty(gameState, action, 5):
-                next.append(action)
-        if len(next) == 0:
-            next = actions
-
-        values = []
-        for action in next:
-            state = gameState.generateSuccessor(self.index, action)
-            value = 0
-            # randomly pick 30 movie with their value of following 10 steps
-            for i in range(1, 31):
-                value += self.randomSimulation(10, state)
-            values.append(value)
-
-        best = max(values)
-        ties = filter(lambda x: x[0] == best, zip(values, next))
-        return random.choice(ties)[1]
-
-
 class DefensiveAgent(ReflexCaptureAgent):
 
     def __init__(self, index):
@@ -212,39 +211,6 @@ class DefensiveAgent(ReflexCaptureAgent):
         self.target = None
         self.lastFood = None
         self.patrolDict = {}
-
-    def toPatrol(self, gameState):
-        foods = self.getFoodYouAreDefending(gameState).asList()
-        total = 0
-
-        for position in self.noWallSpots:
-            closest = "+inf"
-            for pos in foods:
-                dis = self.getMazeDistance(position, pos)
-                if dis < closest:
-                    closest = dis
-
-            # cannot multipy by zero
-            if closest == 0:
-                closest = 1
-
-            self.patrolDict[position] = 1.0 / float(closest)
-            total += self.patrolDict[position]
-
-        if total == 0:
-            total = 1
-        for i in self.patrolDict.keys():
-            self.patrolDict[i] = float(self.patrolDict[i]) / float(total)
-
-    # get another random method
-    def selectTarget(self):
-        rand = random.random()
-        sum = 0.0
-
-        for i in self.patrolDict.keys():
-            sum += self.patrolDict[i]
-            if rand < sum:
-                return i
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
@@ -306,3 +272,36 @@ class DefensiveAgent(ReflexCaptureAgent):
         best = min(fvalues)
         ties = filter(lambda x: x[0] == best, zip(fvalues, next))
         return random.choice(ties)[1]
+
+    def toPatrol(self, gameState):
+        foods = self.getFoodYouAreDefending(gameState).asList()
+        total = 0
+
+        for position in self.noWallSpots:
+            closest = "+inf"
+            for pos in foods:
+                dis = self.getMazeDistance(position, pos)
+                if dis < closest:
+                    closest = dis
+
+            # cannot multipy by zero
+            if closest == 0:
+                closest = 1
+
+            self.patrolDict[position] = 1.0 / float(closest)
+            total += self.patrolDict[position]
+
+        if total == 0:
+            total = 1
+        for i in self.patrolDict.keys():
+            self.patrolDict[i] = float(self.patrolDict[i]) / float(total)
+
+    # get another random method
+    def selectTarget(self):
+        rand = random.random()
+        sum = 0.0
+
+        for i in self.patrolDict.keys():
+            sum += self.patrolDict[i]
+            if rand < sum:
+                return i
