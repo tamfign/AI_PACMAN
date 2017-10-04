@@ -17,6 +17,8 @@ import random, time, util
 from game import Directions
 from util import nearestPoint
 import game
+import sys
+sys.path.append('teams/PACMAN/')
 
 #################
 # Team creation #
