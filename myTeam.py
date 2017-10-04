@@ -85,7 +85,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         # self.distancer.getMazeDistances()
 
     def chooseAction(self, gameState):
-        self.updateInactiveTime()
+        self.updateInactiveTime(gameState)
 
         # If it can only choose action can lead to some where in future 5 stpes
         actions = gameState.getLegalActions(self.index)
@@ -110,11 +110,11 @@ class OffensiveAgent(ReflexCaptureAgent):
         ties = filter(lambda x: x[0] == best, zip(values, next))
         return random.choice(ties)[1]
 
-    def updateInactiveTime(self):
+    def updateInactiveTime(self, gameState):
         # Check whether its in active
         foodCount = len(self.getFood(gameState).asList())
         if self.numEnemyFood != foodCount:
-            self.numEnemyFood = foodCOunt
+            self.numEnemyFood = foodCount
             self.inactiveTime = 0
         else:
             self.inactiveTime += 1
@@ -131,11 +131,11 @@ class OffensiveAgent(ReflexCaptureAgent):
         if old < score:
             return False;
 
-        actions = self.getForwardActions(gameState)
+        actions = self.getForwardActions(successor)
         if len(actions) == 0:
             return True;
         for action in actions:
-            if not self.toDeadEnd(state, action, depth - 1):
+            if not self.toDeadEnd(successor, action, depth - 1):
                 return False
         return True
 
@@ -266,7 +266,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         for action in actions:
             successor = gameState.generateSuccessor(self.index, action)
             if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
-                pos = state.getAgentPosition(self.index)
+                pos = successor.getAgentPosition(self.index)
                 next.append(action)
                 fvalues.append(self.getMazeDistance(pos, self.target))
         best = min(fvalues)
