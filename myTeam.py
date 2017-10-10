@@ -212,7 +212,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         CaptureAgent.__init__(self, index)
         self.target = None
         self.lastFoods = None
-        self.patrolDict = {}
+        self.guardSpots = []
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
@@ -223,20 +223,16 @@ class DefensiveAgent(ReflexCaptureAgent):
             centralX = ((gameState.data.layout.width - 2) / 2) + 1
 
         # no wall = entry
-        self.noWallSpots = []
         for i in range(1, gameState.data.layout.height - 1):
             if not gameState.hasWall(centralX, i):
-                self.noWallSpots.append((centralX, i))
+                self.guardSpots.append((centralX, i))
 
         #if more than half are entries, get rid of the first and last?
-        if len(self.noWallSpots) > (gameState.data.layout.height - 2) / 2:
-            self.noWallSpots.pop(0)
-            self.noWallSpots.pop(len(self.noWallSpots) - 1)
-        self.refreshPatrols(gameState)
+        if len(self.guardSpots) > (gameState.data.layout.height - 2) / 2:
+            self.guardSpots.pop(0)
+            self.guardSpots.pop(len(self.guardSpots) - 1)
 
     def chooseAction(self, gameState):
-        if self.lastFoods and len(self.lastFoods) != len(self.getFoodYouAreDefending(gameState).asList()):
-            self.refreshPatrols(gameState)
 
         # caught the target
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
@@ -258,30 +254,6 @@ class DefensiveAgent(ReflexCaptureAgent):
         ties = filter(lambda x: x[0] == best, zip(fvalues, next))
         return random.choice(ties)[1]
 
-    def refreshPatrols(self, gameState):
-        foods = self.getFoodYouAreDefending(gameState).asList()
-        total = 0
-
-        for position in self.noWallSpots:
-            closest = "+inf"
-            for pos in foods:
-                dis = self.getMazeDistance(position, pos)
-                if dis < closest:
-                    closest = dis
-
-            # cannot multipy by zero
-            if closest == 0:
-                closest = 1
-
-            self.patrolDict[position] = 1.0 / float(closest)
-            total += self.patrolDict[position]
-
-        if total == 0:
-            total = 1
-        for i in self.patrolDict.keys():
-            self.patrolDict[i] = float(self.patrolDict[i]) / float(total)
-
-    # get another random method
     def selectTarget(self, invaders):
 	ret = None
 
@@ -299,15 +271,6 @@ class DefensiveAgent(ReflexCaptureAgent):
                 ret = eaten.pop()
 
         if ret == None:
-            ret = self.pickRandomPatrol()
+            ret = random.choice(self.guardSpots)
 
         return ret
-
-    def pickRandomPatrol(self):
-        rand = random.random()
-        sum = 0.0
-
-        for i in self.patrolDict.keys():
-            sum += self.patrolDict[i]
-            if rand < sum:
-                return i
