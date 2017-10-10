@@ -238,7 +238,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
 
-	self.target = selectTarget(invaders)
+	self.target = self.selectTarget(gameState, invaders)
         # Update new food status
         self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
@@ -256,7 +256,7 @@ class DefensiveAgent(ReflexCaptureAgent):
 
         return random.choice(ties)[1]
 
-    def selectTarget(self, invaders):
+    def selectTarget(self, gameState, invaders):
 	ret = self.target
 
         pos = gameState.getAgentPosition(self.index)
