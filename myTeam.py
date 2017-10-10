@@ -239,28 +239,11 @@ class DefensiveAgent(ReflexCaptureAgent):
             self.toPatrol(gameState)
 
         # caught the target
-        pos = gameState.getAgentPosition(self.index)
-        if pos == self.target:
-            self.target = None
-        opp = self.getOpponents(gameState)
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
 
-        # catch the closest invader
-        if len(invaders) > 0:
-            positions = [agent.getPosition() for agent in invaders]
-            self.target = min(positions, key=lambda x: self.getMazeDistance(pos, x))
-        elif self.lastFood != None:
-            eaten = set(self.lastFood) - set(self.getFoodYouAreDefending(gameState).asList())
-            if len(eaten) > 0:
-                self.target = eaten.pop()
-
+	self.target = selectTarget(invaders)
         self.lastFood = self.getFoodYouAreDefending(gameState).asList()
-        if self.target == None and len(self.getFoodYouAreDefending(gameState).asList()) <= 4:
-            food = self.getFoodYouAreDefending(gameState).asList() + self.capsules(gameState)
-            self.target = random.choice(food)
-        elif self.target == None:
-            self.target = self.selectTarget()
 
         actions = gameState.getLegalActions(self.index)
         next = []
@@ -299,7 +282,31 @@ class DefensiveAgent(ReflexCaptureAgent):
             self.patrolDict[i] = float(self.patrolDict[i]) / float(total)
 
     # get another random method
-    def selectTarget(self):
+    def selectTarget(self, invaders):
+	ret = None
+        pos = gameState.getAgentPosition(self.index)
+        if pos == self.target:
+            ret = None
+
+        # catch the closest invader
+        if len(invaders) > 0:
+            positions = [agent.getPosition() for agent in invaders]
+            ret = min(positions, key=lambda x: self.getMazeDistance(pos, x))
+        elif self.lastFood != None:
+            eaten = set(self.lastFood) - set(self.getFoodYouAreDefending(gameState).asList())
+            if len(eaten) > 0:
+                ret = eaten.pop()
+
+        if ret == None:
+            if len(self.getFoodYouAreDefending(gameState).asList()) <= 4:
+                food = self.getFoodYouAreDefending(gameState).asList() + self.capsules(gameState)
+                ret = random.choice(food)
+            else:
+                ret = self.pickRandomPatrol()
+
+        return ret
+
+    def pickRandomPatrol(self):
         rand = random.random()
         sum = 0.0
 
