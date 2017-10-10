@@ -216,18 +216,18 @@ class DefensiveAgent(ReflexCaptureAgent):
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
-        self.distancer.getMazeDistances()
+        #self.distancer.getMazeDistances()
+
         if self.red:
             centralX = (gameState.data.layout.width - 2) / 2
         else:
             centralX = ((gameState.data.layout.width - 2) / 2) + 1
-
         # no wall = entry
         for i in range(1, gameState.data.layout.height - 1):
             if not gameState.hasWall(centralX, i):
                 self.guardSpots.append((centralX, i))
 
-        #if more than half are entries, get rid of the first and last?
+        #if more than half are entries, get rid of the first and last
         if len(self.guardSpots) > (gameState.data.layout.height - 2) / 2:
             self.guardSpots.pop(0)
             self.guardSpots.pop(len(self.guardSpots) - 1)
@@ -239,19 +239,21 @@ class DefensiveAgent(ReflexCaptureAgent):
         invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
 
 	self.target = selectTarget(invaders)
+        # Update new food status
         self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
         actions = gameState.getLegalActions(self.index)
         next = []
-        fvalues = []
+        hValues = []
         for action in actions:
             successor = gameState.generateSuccessor(self.index, action)
             if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
                 pos = successor.getAgentPosition(self.index)
                 next.append(action)
-                fvalues.append(self.getMazeDistance(pos, self.target))
-        best = min(fvalues)
-        ties = filter(lambda x: x[0] == best, zip(fvalues, next))
+                hValues.append(self.getMazeDistance(pos, self.target))
+        best = min(hValues)
+        ties = filter(lambda x: x[0] == best, zip(hValues, next))
+
         return random.choice(ties)[1]
 
     def selectTarget(self, invaders):
