@@ -298,11 +298,7 @@ class DefensiveAgent(ReflexCaptureAgent):
                 ret = eaten.pop()
 
         if ret == None:
-            if len(self.getFoodYouAreDefending(gameState).asList()) <= 4:
-                food = self.getFoodYouAreDefending(gameState).asList() + self.capsules(gameState)
-                ret = random.choice(food)
-            else:
-                ret = self.pickRandomPatrol()
+            ret = self.pickRandomPatrol()
 
         return ret
 
