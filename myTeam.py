@@ -243,21 +243,21 @@ class DefensiveAgent(ReflexCaptureAgent):
         self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
         actions = gameState.getLegalActions(self.index)
-        next = []
+        nexts = []
         hValues = []
         for action in actions:
             successor = gameState.generateSuccessor(self.index, action)
             if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
                 pos = successor.getAgentPosition(self.index)
-                next.append(action)
+                nexts.append(action)
                 hValues.append(self.getMazeDistance(pos, self.target))
         best = min(hValues)
-        ties = filter(lambda x: x[0] == best, zip(hValues, next))
+        ties = filter(lambda x: x[0] == best, zip(hValues, nexts))
 
         return random.choice(ties)[1]
 
     def selectTarget(self, invaders):
-	ret = None
+	ret = self.target
 
         pos = gameState.getAgentPosition(self.index)
         if pos == self.target:
