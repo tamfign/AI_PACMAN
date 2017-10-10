@@ -232,11 +232,11 @@ class DefensiveAgent(ReflexCaptureAgent):
         if len(self.noWallSpots) > (gameState.data.layout.height - 2) / 2:
             self.noWallSpots.pop(0)
             self.noWallSpots.pop(len(self.noWallSpots) - 1)
-        self.toPatrol(gameState)
+        self.refreshPatrols(gameState)
 
     def chooseAction(self, gameState):
         if self.lastFoods and len(self.lastFoods) != len(self.getFoodYouAreDefending(gameState).asList()):
-            self.toPatrol(gameState)
+            self.refreshPatrols(gameState)
 
         # caught the target
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
@@ -258,7 +258,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         ties = filter(lambda x: x[0] == best, zip(fvalues, next))
         return random.choice(ties)[1]
 
-    def toPatrol(self, gameState):
+    def refreshPatrols(self, gameState):
         foods = self.getFoodYouAreDefending(gameState).asList()
         total = 0
 
