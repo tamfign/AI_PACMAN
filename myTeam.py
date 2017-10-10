@@ -211,7 +211,7 @@ class DefensiveAgent(ReflexCaptureAgent):
     def __init__(self, index):
         CaptureAgent.__init__(self, index)
         self.target = None
-        self.lastFood = None
+        self.lastFoods = None
         self.patrolDict = {}
 
     def registerInitialState(self, gameState):
@@ -235,7 +235,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         self.toPatrol(gameState)
 
     def chooseAction(self, gameState):
-        if self.lastFood and len(self.lastFood) != len(self.getFoodYouAreDefending(gameState).asList()):
+        if self.lastFoods and len(self.lastFoods) != len(self.getFoodYouAreDefending(gameState).asList()):
             self.toPatrol(gameState)
 
         # caught the target
@@ -243,7 +243,7 @@ class DefensiveAgent(ReflexCaptureAgent):
         invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
 
 	self.target = selectTarget(invaders)
-        self.lastFood = self.getFoodYouAreDefending(gameState).asList()
+        self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
         actions = gameState.getLegalActions(self.index)
         next = []
@@ -284,6 +284,7 @@ class DefensiveAgent(ReflexCaptureAgent):
     # get another random method
     def selectTarget(self, invaders):
 	ret = None
+
         pos = gameState.getAgentPosition(self.index)
         if pos == self.target:
             ret = None
@@ -292,8 +293,8 @@ class DefensiveAgent(ReflexCaptureAgent):
         if len(invaders) > 0:
             positions = [agent.getPosition() for agent in invaders]
             ret = min(positions, key=lambda x: self.getMazeDistance(pos, x))
-        elif self.lastFood != None:
-            eaten = set(self.lastFood) - set(self.getFoodYouAreDefending(gameState).asList())
+        elif self.lastFoods != None:
+            eaten = set(self.lastFoods) - set(self.getFoodYouAreDefending(gameState).asList())
             if len(eaten) > 0:
                 ret = eaten.pop()
 
