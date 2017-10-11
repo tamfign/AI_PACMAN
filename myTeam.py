@@ -237,6 +237,8 @@ class DefensiveAgent(ReflexCaptureAgent):
         # Update new food status
         self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
+        if gameState.getAgentPosition(self.index) == self.target:
+            return Directions.STOP
         return self.searchNext(gameState, 5)
 
     def searchNext(self, gameState, depth):
@@ -247,7 +249,7 @@ class DefensiveAgent(ReflexCaptureAgent):
 
         while not queue.isEmpty():
             current, actions = queue.pop()
-            if len(visited) > depth:
+            if len(visited) > depth or current.getAgentPosition(self.index) == self.target:
                 return actions[0]
             if not current in visited:
                 visited.append(current)
