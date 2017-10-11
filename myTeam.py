@@ -233,30 +233,32 @@ class DefensiveAgent(ReflexCaptureAgent):
             self.guardSpots.pop(len(self.guardSpots) - 1)
 
     def chooseAction(self, gameState):
-
-        # caught the target
-        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-        invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
-
-	self.target = self.selectTarget(gameState, invaders)
+	self.target = self.selectTarget(gameState)
         # Update new food status
         self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
-        actions = gameState.getLegalActions(self.index)
-        nexts = []
-        hValues = []
-        for action in actions:
-            successor = gameState.generateSuccessor(self.index, action)
-            if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
-                pos = successor.getAgentPosition(self.index)
-                nexts.append(action)
-                hValues.append(self.getMazeDistance(pos, self.target))
-        best = min(hValues)
-        ties = filter(lambda x: x[0] == best, zip(hValues, nexts))
+        return self.searchNext(gameState, 5)
 
-        return random.choice(ties)[1]
+    def searchNext(self, gameState, depth):
+        ret = []
+        visited = []
+        queue = util.PriorityQueue()
+        queue.push((gameState, []), 0)
 
-    def selectTarget(self, gameState, invaders):
+        while not queue.isEmpty():
+            current, actions = queue.pop()
+            if len(visited) > depth:
+                return actions[0]
+            if not current in visited:
+                visited.append(current)
+                for action in current.getLegalActions(self.index):
+                     successor = self.getSuccessor(current, action)
+                     if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
+                         pos = successor.getAgentPosition(self.index)
+                         queue.push((successor, actions + [action]), self.getMazeDistance(pos, self.target))
+        return actions[0]
+
+    def selectTarget(self, gameState):
 	ret = self.target
 
         pos = gameState.getAgentPosition(self.index)
@@ -264,6 +266,8 @@ class DefensiveAgent(ReflexCaptureAgent):
             ret = None
 
         # catch the closest invader
+        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+        invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
         if len(invaders) > 0:
             positions = [agent.getPosition() for agent in invaders]
             ret = min(positions, key=lambda x: self.getMazeDistance(pos, x))
