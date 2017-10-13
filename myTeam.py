@@ -80,7 +80,7 @@ class OffensiveAgent(ReflexCaptureAgent):
     def __init__(self, index):
         CaptureAgent.__init__(self, index)
         self.numEnemyFood = "+inf"
-        self.inactiveTime = 0
+        self.inactive = 0
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
@@ -103,9 +103,9 @@ class OffensiveAgent(ReflexCaptureAgent):
         for action in next:
             successor = gameState.generateSuccessor(self.index, action)
             value = 0
-            # randomly pick 30 movie with their value of following 10 steps
-            for i in range(1, 31):
-                value += self.randomValue(successor, 10)
+            # randomly pick 20 moves with their value of following 11 steps
+            for i in range(0, 20):
+                value += self.randomValue(successor, 11)
             values.append(value)
 
         best = max(values)
@@ -117,11 +117,11 @@ class OffensiveAgent(ReflexCaptureAgent):
         foodCount = len(self.getFood(gameState).asList())
         if self.numEnemyFood != foodCount:
             self.numEnemyFood = foodCount
-            self.inactiveTime = 0
+            self.inactive = 0
         else:
-            self.inactiveTime += 1
+            self.inactive += 1
         if gameState.getInitialAgentPosition(self.index) == gameState.getAgentState(self.index).getPosition():
-            self.inactiveTime = 0
+            self.inactive = 0
 
     def toDeadEnd(self, gameState, action, depth):
         if depth == 0:
@@ -186,8 +186,8 @@ class OffensiveAgent(ReflexCaptureAgent):
         return ret
 
     def getWeights(self, gameState, action):
-        if self.inactiveTime > 80:
-            return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman':  1000}
+        if self.inactive > 79:
+            return {'score': 199, 'toFood': -6, 'toGhost': 3, 'isPacman':  999}
 
         successor = self.getSuccessor(gameState, action)
         current = successor.getAgentState(self.index).getPosition()
@@ -202,8 +202,8 @@ class OffensiveAgent(ReflexCaptureAgent):
             closeEnemy = filter(lambda x: x[0] == closest, zip(positions, inRange))
             for agent in closeEnemy:
                 if agent[1].scaredTimer > 0:
-                    return {'score': 200, 'toFood': -5, 'toGhost': 0, 'isPacman': 0}
-        return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman': 0}
+                    return {'score': 199, 'toFood': -6, 'toGhost': 1, 'isPacman': 1}
+        return {'score': 199, 'toFood': -6, 'toGhost': 3, 'isPacman': 1}
 
 
 class DefensiveAgent(ReflexCaptureAgent):
