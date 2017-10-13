@@ -49,15 +49,10 @@ def createTeam(firstIndex, secondIndex, isRed,
 # Agents #
 ##########
 
+
 class ReflexCaptureAgent(CaptureAgent):
 
-    def __init__(self):
-        self.ret = None
-
-    def getSuccessor(self, gameState, action):
-        successor = gameState.generateSuccessor(self.index, action)
-        #print 'successor: ', successor
-        pos = successor.getAgentState(self.index).getPosition()
+    def __init__    pos = successor.getAgentState(self.index).getPosition()
         if pos != nearestPoint(pos):
             successor = successor.generateSuccessor(self.index, action)
         #print type(gameState)
@@ -197,9 +192,6 @@ class OffensiveAgent(ReflexCaptureAgent):
         else:
             return False
 
-
-
-
     def updateInactiveTime(self, gameState):
         # Check whether its in active
         # If pacman active it is in danger
@@ -284,8 +276,6 @@ class OffensiveAgent(ReflexCaptureAgent):
         lst.remove(min(lst))
         return lst
 
-    
-
     def getFeatures(self, gameState, action):
         ret = util.Counter()
         successor = self.getSuccessor(gameState, action)
@@ -359,99 +349,74 @@ class DefensiveAgent(ReflexCaptureAgent):
     def __init__(self, index):
         CaptureAgent.__init__(self, index)
         self.target = None
-        self.lastFood = None
-        self.patrolDict = {}
+        self.lastFoods = None
+        self.guardSpots = []
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
-        self.distancer.getMazeDistances()
+        #self.distancer.getMazeDistances()
+
         if self.red:
             centralX = (gameState.data.layout.width - 2) / 2
         else:
             centralX = ((gameState.data.layout.width - 2) / 2) + 1
-
         # no wall = entry
-        self.noWallSpots = []
         for i in range(1, gameState.data.layout.height - 1):
             if not gameState.hasWall(centralX, i):
-                self.noWallSpots.append((centralX, i))
+                self.guardSpots.append((centralX, i))
 
-        #if more than half are entries, get rid of the first and last?
-        if len(self.noWallSpots) > (gameState.data.layout.height - 2) / 2:
-            self.noWallSpots.pop(0)
-            self.noWallSpots.pop(len(self.noWallSpots) - 1)
-        self.toPatrol(gameState)
+        #if more than half are entries, get rid of the first and last
+        if len(self.guardSpots) > (gameState.data.layout.height - 2) / 2:
+            self.guardSpots.pop(0)
+            self.guardSpots.pop(len(self.guardSpots) - 1)
 
     def chooseAction(self, gameState):
-        if self.lastFood and len(self.lastFood) != len(self.getFoodYouAreDefending(gameState).asList()):
-            self.toPatrol(gameState)
+	self.target = self.selectTarget(gameState)
+        # Update new food status
+        self.lastFoods = self.getFoodYouAreDefending(gameState).asList()
 
-        # caught the target
+        if gameState.getAgentPosition(self.index) == self.target:
+            return Directions.STOP
+        return self.searchNext(gameState, 5)
+
+    def searchNext(self, gameState, depth):
+        ret = []
+        visited = []
+        queue = util.PriorityQueue()
+        queue.push((gameState, []), 0)
+
+        while not queue.isEmpty():
+            current, actions = queue.pop()
+            if len(visited) > depth or current.getAgentPosition(self.index) == self.target:
+                return actions[0]
+            if not current in visited:
+                visited.append(current)
+                for action in current.getLegalActions(self.index):
+                     successor = self.getSuccessor(current, action)
+                     if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
+                         pos = successor.getAgentPosition(self.index)
+                         queue.push((successor, actions + [action]), self.getMazeDistance(pos, self.target))
+        return actions[0]
+
+    def selectTarget(self, gameState):
+	ret = self.target
+
         pos = gameState.getAgentPosition(self.index)
         if pos == self.target:
-            self.target = None
-        opp = self.getOpponents(gameState)
-        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-        invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
+            ret = None
 
         # catch the closest invader
+        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+        invaders = filter(lambda x: x.isPacman and x.getPosition() != None, enemies)
         if len(invaders) > 0:
             positions = [agent.getPosition() for agent in invaders]
-            self.target = min(positions, key=lambda x: self.getMazeDistance(pos, x))
-        elif self.lastFood != None:
-            eaten = set(self.lastFood) - set(self.getFoodYouAreDefending(gameState).asList())
+            ret = min(positions, key=lambda x: self.getMazeDistance(pos, x))
+        elif self.lastFoods != None:
+            eaten = set(self.lastFoods) - set(self.getFoodYouAreDefending(gameState).asList())
             if len(eaten) > 0:
-                self.target = eaten.pop()
+                ret = eaten.pop()
 
-        self.lastFood = self.getFoodYouAreDefending(gameState).asList()
-        if self.target == None and len(self.getFoodYouAreDefending(gameState).asList()) <= 4:
-            food = self.getFoodYouAreDefending(gameState).asList() + self.capsules(gameState)
-            self.target = random.choice(food)
-        elif self.target == None:
-            self.target = self.selectTarget()
+        if ret == None:
+            ret = random.choice(self.guardSpots)
 
-        actions = gameState.getLegalActions(self.index)
-        next = []
-        fvalues = []
-        for action in actions:
-            successor = gameState.generateSuccessor(self.index, action)
-            if not successor.getAgentState(self.index).isPacman and not action == Directions.STOP:
-                pos = successor.getAgentPosition(self.index)
-                next.append(action)
-                fvalues.append(self.getMazeDistance(pos, self.target))
-        best = min(fvalues)
-        ties = filter(lambda x: x[0] == best, zip(fvalues, next))
-        return random.choice(ties)[1]
-
-    def toPatrol(self, gameState):
-        foods = self.getFoodYouAreDefending(gameState).asList()
-        total = 0
-
-        for position in self.noWallSpots:
-            closest = "+inf"
-            for pos in foods:
-                dis = self.getMazeDistance(position, pos)
-                if dis < closest:
-                    closest = dis
-
-            # cannot multipy by zero
-            if closest == 0:
-                closest = 1
-
-            self.patrolDict[position] = 1.0 / float(closest)
-            total += self.patrolDict[position]
-
-        if total == 0:
-            total = 1
-        for i in self.patrolDict.keys():
-            self.patrolDict[i] = float(self.patrolDict[i]) / float(total)
-
-    # get another random method
-    def selectTarget(self):
-        rand = random.random()
-        sum = 0.0
-
-        for i in self.patrolDict.keys():
-            sum += self.patrolDict[i]
-            if rand < sum:
-                return i
+        return ret
