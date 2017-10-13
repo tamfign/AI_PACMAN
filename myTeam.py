@@ -52,7 +52,6 @@ class ReflexCaptureAgent(CaptureAgent):
 
     def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
-
         pos = successor.getAgentState(self.index).getPosition()
         if pos != nearestPoint(pos):
             successor = successor.generateSuccessor(self.index, action)
@@ -162,28 +161,31 @@ class OffensiveAgent(ReflexCaptureAgent):
     def getFeatures(self, gameState, action):
         ret = util.Counter()
         successor = self.getSuccessor(gameState, action)
-
         nextPos = successor.getAgentState(self.index).getPosition()
+
         ret['score'] = self.getScore(successor)
+        ret['toFood'] = getFoodFeature(successor, nextPos)
+        ret['toGhost'] = getGhostFeature(successor)
+        ret['isPacman'] = successor.getAgentState(self.index).isPacman ? 1 : 0
 
-        foodList = self.getFood(successor).asList()
-        if len(foodList) > 0:
-            ret['toFood'] = min([self.getMazeDistance(nextPos, food) for food in foodList])
+        return ret
 
-        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+    def getGhostFeature(self, gameState):
+        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         inRange = filter(lambda x: not x.isPacman and x.getPosition() != None, enemies)
         if len(inRange) > 0:
             positions = [agent.getPosition() for agent in inRange]
             closest = min(positions, key=lambda x: self.getMazeDistance(nextPos, x))
             distance = self.getMazeDistance(nextPos, closest)
             if distance <= 5:
-                ret['toGhost'] = distance
+                return distance
+        return 0
 
-        ret['isPacman'] = 0
-        if successor.getAgentState(self.index).isPacman:
-            ret['isPacman'] = 1
-
-        return ret
+    def getFoodFeature(self, gameState, pos):
+        foodList = self.getFood(gameState).asList()
+        if len(foodList) > 0:
+            return min([self.getMazeDistance(pos, food) for food in foodList])
+        return 0
 
     def getWeights(self, gameState, action):
         if self.inactive > 79:
