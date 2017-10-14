@@ -16,7 +16,6 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 from util import nearestPoint
-from qLearning import qLearning_strategy
 import game
 import sys
 sys.path.append('teams/PACMAN/')
@@ -52,8 +51,6 @@ def createTeam(firstIndex, secondIndex, isRed,
 
 class ReflexCaptureAgent(CaptureAgent):
 
-    def __init__(self):
-        self.features = None
 
     def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
@@ -62,8 +59,6 @@ class ReflexCaptureAgent(CaptureAgent):
             successor = successor.generateSuccessor(self.index, action)
         return successor
 
-    def get_ret(self):
-        return self.features
 
     def evaluate(self, gameState, action):
         features = self.getFeatures(gameState, action)
@@ -88,9 +83,11 @@ class OffensiveAgent(ReflexCaptureAgent):
         self.features = {'isPacman': 0}
         self.numEnemyFood = "+inf"
         self.inactiveTime = 0
-        self.__qlearning = qLearning_strategy(self,index)
         self.__actioncount = 0
         self.__actionLst = []
+
+    def get_ret(self):
+        return self.features
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
@@ -113,7 +110,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         except:
             actions = gameState.getLegalActions(self.index)
             actions.remove(Directions.STOP)
-            takeAction = self.featuresurn_action(actions,gameState)
+            takeAction = self.getBestAction(actions,gameState)
         return takeAction
 
     def getBestAction(self, nextAction, gameState):
