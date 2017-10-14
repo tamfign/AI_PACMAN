@@ -53,7 +53,7 @@ def createTeam(firstIndex, secondIndex, isRed,
 class ReflexCaptureAgent(CaptureAgent):
 
     def __init__(self):
-        self.ret = None
+        self.features = None
 
     def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
@@ -63,11 +63,11 @@ class ReflexCaptureAgent(CaptureAgent):
         return successor
 
     def get_ret(self):
-        return self.ret
+        return self.features
 
     def evaluate(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        self.ret = features
+        self.features = features
         weights = self.getWeights(gameState, action)
         return features * weights
 
@@ -85,17 +85,15 @@ class OffensiveAgent(ReflexCaptureAgent):
 
     def __init__(self, index):
         CaptureAgent.__init__(self, index)
-        self.ret = {'isPacman': 0}
+        self.features = {'isPacman': 0}
         self.numEnemyFood = "+inf"
         self.inactiveTime = 0
         self.__qlearning = qLearning_strategy(self,index)
         self.__actioncount = 0
         self.__actionLst = []
-        #self.__stateLst = []
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
-        # self.distancer.getMazeDistances()
 
     def chooseAction(self, gameState):
         self.updateInactiveTime(gameState)
@@ -107,7 +105,7 @@ class OffensiveAgent(ReflexCaptureAgent):
                 nextAction.append(action)
         if len(nextAction) == 0:
             nextAction = actions
-        return self.return_action(nextAction, gameState)
+        return self.getBestAction(nextAction, gameState)
 
     def randomChoice(self, nextAction, gameState):
         try:
@@ -115,10 +113,10 @@ class OffensiveAgent(ReflexCaptureAgent):
         except:
             actions = gameState.getLegalActions(self.index)
             actions.remove(Directions.STOP)
-            takeAction = self.return_action(actions,gameState)
+            takeAction = self.featuresurn_action(actions,gameState)
         return takeAction
 
-    def return_action(self, nextAction, gameState):
+    def getBestAction(self, nextAction, gameState):
         values = []
         for action in nextAction:
             successor = gameState.generateSuccessor(self.index, action)
@@ -132,24 +130,26 @@ class OffensiveAgent(ReflexCaptureAgent):
             takeAction = random.choice(cleanlst)[1]
         except ValueError:
             takeAction = self.randomChoice(nextAction, gameState)
-        if self.actionPlanBuild(gameState, takeAction):
+
+        self.__actionLst.append(takeAction)
+        if self.revActionCheck():
             nextAction.remove(takeAction)
             takeAction = self.randomChoice(nextAction, gameState)
-        #if not self.revActionCheck(self.__actionLst)
         return takeAction
 
-
-    # new added: number 2
-    # @ input : action, state
-    # if already have five steps plan, then check if there is reverse happened
-    def actionPlanBuild(self, gameState, action):
-        self.__actionLst.append(action)
-        self.__actioncount += 1
+    # new added: number1
+    # @ input: list of five posialbe actions
+    # @ check if there the reversed action is inclued
+    # @ output: boolean
+    def revActionCheck(self):
+        from game import Actions
         result = False
-        if self.__actioncount == 5:
-            self.__actioncount = 0
-            if not self.revActionCheck(self.__actionLst):
-                result = True
+
+        if len(self.__actionLst) == 5:
+            for index, value in enumerate(self.__actionLst):
+                if index +1 != len(self.__actionLst):
+                    if self.__actionLst[index+1] == Actions.reverseDirection(value) and self.deadLoopCount():
+                        result = True
             self.__actionLst = []
         return result
 
@@ -212,21 +212,6 @@ class OffensiveAgent(ReflexCaptureAgent):
             actions.remove(reversed)
         return actions
 
-    # new added: number1
-    # @ input: list of five posialbe actions
-    # @ check if there the reversed action is inclued
-    # @ output: boolean
-    def revActionCheck(self, actionLst):
-        from game import Actions
-        result = True
-        for index, value in enumerate(actionLst):
-            if index +1 != len(actionLst):
-                if actionLst[index+1] == Actions.reverseDirection(value) and self.deadLoopCount():
-                    result = False
-        return result
-
-
-
     def getFeatures(self, gameState, action):
         ret = util.Counter()
         successor = self.getSuccessor(gameState, action)
@@ -249,7 +234,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         ret['isPacman'] = 0
         if successor.getAgentState(self.index).isPacman:
             ret['isPacman'] = 1
-        self.ret = ret
+        self.features = ret
         return ret
 
     def getWeights(self, gameState, action):
@@ -270,9 +255,10 @@ class OffensiveAgent(ReflexCaptureAgent):
             for agent in closeEnemy:
                 if agent[1].scaredTimer > 0:
                     return {'score': 200, 'toFood': -5, 'toGhost': 0, 'isPacman': 0}
-        if self.ret['isPacman'] == 1:
+        if self.features['isPacman'] == 1:
             return {'score': 200, 'toFood': -3, 'toGhost': 2, 'isPacman': 0}
         return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman': 0}
+
 
 class DefensiveAgent(ReflexCaptureAgent):
 
