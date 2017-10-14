@@ -57,12 +57,9 @@ class ReflexCaptureAgent(CaptureAgent):
 
     def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
-        #print 'successor: ', successor
         pos = successor.getAgentState(self.index).getPosition()
         if pos != nearestPoint(pos):
             successor = successor.generateSuccessor(self.index, action)
-        #print type(gameState)
-
         return successor
 
     def get_ret(self):
@@ -72,13 +69,10 @@ class ReflexCaptureAgent(CaptureAgent):
         features = self.getFeatures(gameState, action)
         self.ret = features
         weights = self.getWeights(gameState, action)
-        #print 'lala', features * weights
-
         return features * weights
 
     def getFeatures(self, gameState, action):
         ret = util.Counter()
-
         successor = self.getSuccessor(gameState, action)
         features['score'] = self.getScore(successor)
         return ret
@@ -94,12 +88,10 @@ class OffensiveAgent(ReflexCaptureAgent):
         self.ret = {'isPacman': 0}
         self.numEnemyFood = "+inf"
         self.inactiveTime = 0
-        # added
         self.__qlearning = qLearning_strategy(self,index)
         self.__actioncount = 0
         self.__actionLst = []
-        self.__stateLst = []
-        #self.__qtable = self.__qlearning.get_qtable()
+        #self.__stateLst = []
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
@@ -107,8 +99,6 @@ class OffensiveAgent(ReflexCaptureAgent):
 
     def chooseAction(self, gameState):
         self.updateInactiveTime(gameState)
-
-        # If it can only choose action can lead to some where in future 5 stpes
         actions = gameState.getLegalActions(self.index)
         actions.remove(Directions.STOP)
         nextAction = []
@@ -116,25 +106,9 @@ class OffensiveAgent(ReflexCaptureAgent):
             if not self.toDeadEnd(gameState, action, 5):
                 nextAction.append(action)
         if len(nextAction) == 0:
-            print(actions)
             nextAction = actions
-
-        values = []
-        #print self.get_ret()
-        #try:
-        #    if self.get_ret()['toGhost']!=0 and self.get_ret()['isPacman'] == 0 and 'East' in nextAction and self.index == 0:
-        #        self.actionPlanBuild(gameState, 'East')
-        #        print nextAction
-        #        return 'East'
-
-        #   else:
         return self.return_action(nextAction, gameState)
-        #except:
-        #    print 'here2'
-        #    return self.return_action(nextAction, gameState)
 
-    #new added : n:
-    # new added : number3
     def randomChoice(self, nextAction, gameState):
         try:
             takeAction = random.choice(nextAction)
@@ -149,12 +123,9 @@ class OffensiveAgent(ReflexCaptureAgent):
         for action in nextAction:
             successor = gameState.generateSuccessor(self.index, action)
             value = 0
-            # randomly pick 30 movie with their value of following 10 steps
             for i in range(1, 31):
                 value += self.randomValue(successor, 10)
             values.append(value)
-        # Qlearning started:
-        #self.actionPlanBuild()
         try:
             bestAction = max(values)
             cleanlst = filter(lambda x: x[0] == bestAction, zip(values, nextAction))
@@ -164,25 +135,22 @@ class OffensiveAgent(ReflexCaptureAgent):
         if self.actionPlanBuild(gameState, takeAction):
             nextAction.remove(takeAction)
             takeAction = self.randomChoice(nextAction, gameState)
-            print takeAction
         #if not self.revActionCheck(self.__actionLst)
         return takeAction
+
+
     # new added: number 2
     # @ input : action, state
     # if already have five steps plan, then check if there is reverse happened
     def actionPlanBuild(self, gameState, action):
-        self.__stateLst.append(gameState)
         self.__actionLst.append(action)
         self.__actioncount += 1
         result = False
         if self.__actioncount == 5:
             self.__actioncount = 0
             if not self.revActionCheck(self.__actionLst):
-                #print self.__actionLst
-                #self.__qlearning.init_table(self.__stateLst)
                 result = True
             self.__actionLst = []
-            self.__stateLst = []
         return result
 
     def deadLoopCount(self):
@@ -201,8 +169,6 @@ class OffensiveAgent(ReflexCaptureAgent):
         # Check whether its in active
         # If pacman active it is in danger
         foodCount = len(self.getFood(gameState).asList())
-        #print 'foodCound: ', gameState
-        #print self.numEnemyFood
         if self.numEnemyFood != foodCount:
             self.numEnemyFood = foodCount
             self.inactiveTime = 0
@@ -231,27 +197,19 @@ class OffensiveAgent(ReflexCaptureAgent):
 
     def randomValue(self, gameState, depth):
         state = gameState.deepCopy()
-        #print gameState,state
         while depth > 0:
             actions = self.getForwardActions(state)
             action = random.choice(actions)
-            #print self.index
             state = state.generateSuccessor(self.index, action)
             depth -= 1
-            #print self.evaluate(state, Directions.STOP)
         return self.evaluate(state, Directions.STOP)
 
     def getForwardActions(self, gameState):
         actions = gameState.getLegalActions(self.index)
         actions.remove(Directions.STOP)
         reversed = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-        #print 'actions: ', reversed
         if reversed in actions and len(actions) > 1:
             actions.remove(reversed)
-        elif reversed in actions and len(actions) == 1:
-            pass
-            #print 'gameStateis ', actions
-
         return actions
 
     # new added: number1
@@ -267,36 +225,18 @@ class OffensiveAgent(ReflexCaptureAgent):
                     result = False
         return result
 
-    def goAttack(self, ret, actLst):
-        if ret['isPacman'] == 0:
-            #print 'here'
-            if self.index == 0 and 'East' in actLst:
-                return 'East'
-        else:
-            if self.index == 0 and 'East' in actLst:
-                return 'West'
 
-    def SecondMin(self, lst):
-        # return the second min value of a lst
-        lst.remove(min(lst))
-        return lst
 
     def getFeatures(self, gameState, action):
         ret = util.Counter()
         successor = self.getSuccessor(gameState, action)
 
         nextPos = successor.getAgentState(self.index).getPosition()
-        #print 'nextpos', nextPos
         ret['score'] = self.getScore(successor)
 
         foodList = self.getFood(successor).asList()
-        #print foodList
         if len(foodList) > 0:
             ret['toFood'] = min([self.getMazeDistance(nextPos, food) for food in foodList])
-            print  'lst: ',[self.getMazeDistance(nextPos, food) for food in foodList]
-            print 'foodList:',foodList
-            print 'nextpos: ', nextPos
-        #print ret['toFood']
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         inRange = filter(lambda x: not x.isPacman and x.getPosition() != None, enemies)
@@ -306,17 +246,10 @@ class OffensiveAgent(ReflexCaptureAgent):
             distance = self.getMazeDistance(nextPos, closest)
             if distance <= 5:
                 ret['toGhost'] = distance
-
         ret['isPacman'] = 0
-
-        #self.goAttack(ret)
-        #print type(successor)
         if successor.getAgentState(self.index).isPacman:
             ret['isPacman'] = 1
-            #print self.index
-        #print ret
         self.ret = ret
-        #print ret['isPacman']
         return ret
 
     def getWeights(self, gameState, action):
@@ -327,24 +260,18 @@ class OffensiveAgent(ReflexCaptureAgent):
         current = successor.getAgentState(self.index).getPosition()
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        #print 'current: ', current
-        #print 'enemies: ', enemies
         inRange = filter(lambda x: not x.isPacman and x.getPosition() != None, enemies)
 
         if len(inRange) > 0:
             positions = [agent.getPosition() for agent in inRange]
             closest = min(positions, key=lambda x: self.getMazeDistance(current, x))
-            # position
             distance = self.getMazeDistance(current, closest)
             closeEnemy = filter(lambda x: x[0] == closest, zip(positions, inRange))
-            #print 'enemy:',closeEnemy
             for agent in closeEnemy:
-                #print type(agent[1])
                 if agent[1].scaredTimer > 0:
-
                     return {'score': 200, 'toFood': -5, 'toGhost': 0, 'isPacman': 0}
         if self.ret['isPacman'] == 1:
-            return {'score': 200, 'toFood': 1, 'toGhost': 2, 'isPacman': 0}
+            return {'score': 200, 'toFood': -3, 'toGhost': 2, 'isPacman': 0}
         return {'score': 200, 'toFood': -5, 'toGhost': 2, 'isPacman': 0}
 
 class DefensiveAgent(ReflexCaptureAgent):
